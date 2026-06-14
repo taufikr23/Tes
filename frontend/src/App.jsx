@@ -11,8 +11,6 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { useAuth } from "./hooks/useAuth";
 import Navbar from "./components/Layout/Navbar";
 import Footer from "./components/Layout/Footer";
-import AuthLayout from "./components/Layout/AuthLayout";
-import api from "./utils/api";
 
 // Lazy load pages
 const Login = lazy(() => import("./pages/Login"));
@@ -44,8 +42,13 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
   if (loading) return <LoadingSpinner />;
   if (!user) return <Navigate to="/login" replace />;
-  if (allowedRoles && !allowedRoles.includes(user.role))
-    return <Navigate to="/" replace />;
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    if (user.role === "admin")
+      return <Navigate to="/admin/dashboard" replace />;
+    if (user.role === "dokter")
+      return <Navigate to="/doctor/dashboard" replace />;
+    return <Navigate to="/patient/dashboard" replace />;
+  }
   return children;
 };
 
@@ -55,33 +58,13 @@ function AppContent() {
   const location = useLocation();
 
   useEffect(() => {
-    if (!user) return;
-    if (user.role === "dokter" && location.pathname === "/patient/dashboard")
-      navigate("/doctor/dashboard", { replace: true });
-    if (user.role === "pasien" && location.pathname === "/doctor/dashboard")
-      navigate("/patient/dashboard", { replace: true });
-    if (
-      user.role === "admin" &&
-      (location.pathname === "/patient/dashboard" ||
-        location.pathname === "/doctor/dashboard")
-    )
-      navigate("/admin/dashboard", { replace: true });
-  }, [user, location.pathname, navigate]);
-
-  useEffect(() => {
-    if (!user) return;
-    const checkRole = async () => {
-      try {
-        const response = await api.get("/profiles/me");
-        if (response.data.success && response.data.data.role !== user.role)
-          window.location.reload();
-      } catch (err) {
-        console.error("Role check error:", err);
-      }
-    };
-    const interval = setInterval(checkRole, 5000);
-    return () => clearInterval(interval);
-  }, [user]);
+    console.log(
+      "AppContent - User role:",
+      user?.role,
+      "Path:",
+      location.pathname,
+    );
+  }, [user, location]);
 
   if (loading) return <LoadingSpinner />;
 
@@ -91,23 +74,9 @@ function AppContent() {
       <main className="flex-grow">
         <Suspense fallback={<LoadingSpinner />}>
           <Routes>
-            {/* Auth routes dengan animasi */}
-            <Route
-              path="/login"
-              element={
-                <AuthLayout>
-                  <Login />
-                </AuthLayout>
-              }
-            />
-            <Route
-              path="/register"
-              element={
-                <AuthLayout>
-                  <Register />
-                </AuthLayout>
-              }
-            />
+            {/* Auth routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
 
             <Route
               path="/"
@@ -155,14 +124,8 @@ function AppContent() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/apply-doctor"
-              element={
-                <ProtectedRoute allowedRoles={["pasien"]}>
-                  <ApplyDoctor />
-                </ProtectedRoute>
-              }
-            />
+
+            {/* PUBLIC ROUTES - Bisa diakses semua user yang login */}
             <Route
               path="/doctors"
               element={
@@ -171,14 +134,7 @@ function AppContent() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/consultation"
-              element={
-                <ProtectedRoute allowedRoles={["pasien"]}>
-                  <ConsultationPage />
-                </ProtectedRoute>
-              }
-            />
+
             <Route
               path="/medicines"
               element={
@@ -187,6 +143,7 @@ function AppContent() {
                 </ProtectedRoute>
               }
             />
+
             <Route
               path="/cart"
               element={
@@ -195,6 +152,7 @@ function AppContent() {
                 </ProtectedRoute>
               }
             />
+
             <Route
               path="/orders"
               element={
@@ -203,6 +161,7 @@ function AppContent() {
                 </ProtectedRoute>
               }
             />
+
             <Route
               path="/consultations/history"
               element={
@@ -211,6 +170,25 @@ function AppContent() {
                 </ProtectedRoute>
               }
             />
+
+            <Route
+              path="/consultation"
+              element={
+                <ProtectedRoute allowedRoles={["pasien"]}>
+                  <ConsultationPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/apply-doctor"
+              element={
+                <ProtectedRoute allowedRoles={["pasien"]}>
+                  <ApplyDoctor />
+                </ProtectedRoute>
+              }
+            />
+
             <Route
               path="/payment/:orderId"
               element={
@@ -220,7 +198,6 @@ function AppContent() {
               }
             />
 
-            {/* Settings */}
             <Route
               path="/settings"
               element={

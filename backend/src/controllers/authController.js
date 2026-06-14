@@ -7,34 +7,45 @@ export const register = async (req, res) => {
 
     console.log('📝 Register attempt:', email);
 
-    // Register user dengan Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: {
-          nama: nama,
-          nomor_telepon: nomor_telepon,
-          alamat: alamat,
-        },
+        data: { nama, nomor_telepon, alamat },
         emailRedirectTo: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login`
       }
     });
 
     if (authError) {
       console.error('❌ Auth error:', authError);
+      
+      // Handle rate limit
+      if (authError.status === 429 || authError.message?.includes('rate limit')) {
+        return res.status(429).json({ 
+          success: false, 
+          message: 'Terlalu banyak percobaan. Silakan coba lagi dalam 1 jam atau gunakan email lain.' 
+        });
+      }
+      
+      if (authError.message?.includes('already registered')) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Email sudah terdaftar. Silakan login.' 
+        });
+      }
+      
       return res.status(400).json({ success: false, message: authError.message });
     }
 
     console.log('✅ User registered:', authData.user?.id);
 
-    // BUAT PROFILE LANGSUNG DI SINI (jangan tunggu verifikasi)
+    // Buat profile
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
       .upsert([{
         id: authData.user.id,
-        email: email,
-        nama: nama,
+        email,
+        nama,
         nomor_telepon: nomor_telepon || '',
         alamat: alamat || '',
         role: role || 'pasien'
@@ -42,14 +53,11 @@ export const register = async (req, res) => {
 
     if (profileError) {
       console.error('❌ Profile error:', profileError);
-      // Tetap lanjutkan, jangan gagalkan register
-    } else {
-      console.log('✅ Profile created for:', email);
     }
 
     res.status(201).json({
       success: true,
-      message: 'Pendaftaran berhasil! Silakan cek email Anda untuk verifikasi.',
+      message: 'Pendaftaran berhasil! Silakan cek email Anda (termasuk folder SPAM) untuk verifikasi.',
       user: { 
         id: authData.user.id, 
         email, 
@@ -81,52 +89,29 @@ export const login = async (req, res) => {
       if (authError.code === 'email_not_confirmed') {
         return res.status(401).json({ 
           success: false, 
-          message: 'Email belum diverifikasi. Silakan cek inbox atau folder SPAM Anda.' 
+          message: 'Email belum diverifikasi. Silakan cek inbox atau folder SPAM Anda.', 
+          code: 'email_not_confirmed' 
         });
       }
       
       return res.status(401).json({ 
         success: false, 
-        message: 'Email atau password salah' 
+        message: 'Email atau password salah. Periksa kembali.' 
       });
     }
 
-    // Ambil profile dari tabel profiles
-    let { data: profile, error: profileError } = await supabase
+    // Ambil profile
+    let { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('*')
       .eq('id', authData.user.id)
       .single();
 
-    // Jika profile tidak ditemukan, buat profile baru (fallback)
     if (profileError || !profile) {
-      console.log('📝 Profile not found, creating fallback profile for:', authData.user.id);
-      
-      const userMetadata = authData.user.user_metadata;
-      
-      const { data: newProfile, error: insertError } = await supabaseAdmin
-        .from('profiles')
-        .upsert([{
-          id: authData.user.id,
-          email: email,
-          nama: userMetadata?.nama || email.split('@')[0],
-          nomor_telepon: userMetadata?.nomor_telepon || '',
-          alamat: userMetadata?.alamat || '',
-          role: 'pasien'
-        }])
-        .select()
-        .single();
-
-      if (insertError) {
-        console.error('❌ Failed to create profile:', insertError);
-        return res.status(404).json({ 
-          success: false, 
-          message: 'Profil tidak ditemukan. Silakan registrasi ulang.' 
-        });
-      }
-      
-      profile = newProfile;
-      console.log('✅ Fallback profile created');
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Profil tidak ditemukan. Silakan registrasi ulang.' 
+      });
     }
 
     console.log('✅ Profile found:', profile.email, 'Role:', profile.role);
@@ -152,6 +137,30 @@ export const login = async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Login error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const resendVerification = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: {
+        emailRedirectTo: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login`
+      }
+    });
+
+    if (error) throw error;
+
+    res.json({ 
+      success: true, 
+      message: 'Email verifikasi telah dikirim ulang. Cek inbox atau SPAM Anda.' 
+    });
+  } catch (error) {
+    console.error('❌ Resend error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

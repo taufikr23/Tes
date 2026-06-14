@@ -140,19 +140,24 @@ const Settings = () => {
     }
   };
 
+  // Di bagian saveDoctorProfile, ganti dengan ini:
+
   const saveDoctorProfile = async (e) => {
     e.preventDefault();
     setSaving(true);
     try {
       if (doctorData) {
-        // Update existing doctor
+        // Update ke tabel doctors (bukan profiles!)
         await api.put(`/doctors/${doctorData.id}`, {
-          ...doctorForm,
+          nama_dokter: doctorForm.nama_dokter,
+          spesialis: doctorForm.spesialis,
           biaya_konsultasi: parseFloat(doctorForm.biaya_konsultasi),
+          jadwal_praktik: doctorForm.jadwal_praktik,
+          foto: doctorForm.foto, // Foto dokter disimpan di tabel doctors
         });
+        alert("✅ Profil dokter berhasil diperbarui!");
+        fetchDoctorData();
       }
-      alert("✅ Profil dokter berhasil diperbarui!");
-      fetchDoctorData();
     } catch (err) {
       alert(err.response?.data?.message || "Gagal memperbarui profil dokter");
     } finally {
@@ -671,6 +676,6 @@ const Settings = () => {
       </div>
     </div>
   );
-};
+};;
 
 export default Settings;
