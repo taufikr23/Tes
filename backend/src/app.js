@@ -13,6 +13,8 @@ import profileRoutes from './routes/profileRoutes.js';
 import doctorApplicationRoutes from './routes/doctorApplicationRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
+import consultationPaymentRoutes from './routes/consultationPaymentRoutes.js';
+
 
 
 
@@ -38,6 +40,8 @@ app.use('/api/doctor-applications', doctorApplicationRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/consultation-payments', consultationPaymentRoutes);
+
 
 
 app.get('/health', (req, res) => {

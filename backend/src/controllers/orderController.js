@@ -9,6 +9,7 @@ export const createOrder = async (req, res) => {
     console.log('items:', items);
     console.log('total_harga:', total_harga);
     
+    // Validasi input
     if (!user_id) {
       return res.status(400).json({ success: false, message: 'User ID diperlukan' });
     }
@@ -17,7 +18,7 @@ export const createOrder = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Item pesanan tidak boleh kosong' });
     }
     
-    // Check stock
+    // VALIDASI STOCK
     for (const item of items) {
       const { data: medicine, error } = await supabaseAdmin
         .from('medicines')
@@ -28,11 +29,13 @@ export const createOrder = async (req, res) => {
       if (error || !medicine) {
         return res.status(400).json({ 
           success: false, 
-          message: `Obat tidak ditemukan` 
+          message: `Obat dengan ID ${item.medicine_id} tidak ditemukan` 
         });
       }
       
-      if (medicine.stok < item.jumlah) {
+      const jumlahBeli = parseInt(item.jumlah);
+      
+      if (medicine.stok < jumlahBeli) {
         return res.status(400).json({ 
           success: false, 
           message: `Stok ${medicine.nama_obat} tidak mencukupi. Sisa stok: ${medicine.stok}` 
@@ -40,13 +43,13 @@ export const createOrder = async (req, res) => {
       }
     }
     
-    // Create order - gunakan status 'pending' (menunggu pembayaran)
+    // Create order
     const { data: order, error: orderError } = await supabaseAdmin
       .from('orders')
       .insert([{
         user_id,
-        total_harga,
-        status_pembayaran: 'pending'  // 'pending' = menunggu pembayaran
+        total_harga: parseInt(total_harga),
+        status_pembayaran: 'pending'
       }])
       .select();
     
@@ -57,31 +60,58 @@ export const createOrder = async (req, res) => {
     
     console.log('Order created:', order[0]);
     
-    // Create order details and update stock
+    // CREATE ORDER DETAILS & UPDATE STOCK
     for (const item of items) {
-      await supabaseAdmin
+      const medicineId = item.medicine_id;
+      const jumlahBeli = parseInt(item.jumlah);
+      const subtotal = parseInt(item.subtotal);
+      
+      // Insert order detail
+      const { error: detailError } = await supabaseAdmin
         .from('order_details')
         .insert([{
           order_id: order[0].id,
-          medicine_id: item.medicine_id,
-          jumlah: item.jumlah,
-          subtotal: item.subtotal
+          medicine_id: medicineId,
+          jumlah: jumlahBeli,
+          subtotal: subtotal
         }]);
       
-      // Update stock
-      const { data: medicine } = await supabaseAdmin
+      if (detailError) {
+        console.error('Detail error:', detailError);
+        throw detailError;
+      }
+      
+      // UPDATE STOCK - PAKAI cara yang paling aman
+      // Ambil stok saat ini
+      const { data: currentMedicine, error: fetchError } = await supabaseAdmin
         .from('medicines')
         .select('stok')
-        .eq('id', item.medicine_id)
+        .eq('id', medicineId)
         .single();
       
-      await supabaseAdmin
+      if (fetchError) {
+        console.error('Fetch stock error:', fetchError);
+        throw fetchError;
+      }
+      
+      const newStock = currentMedicine.stok - jumlahBeli;
+      
+      // Update stok
+      const { error: updateError } = await supabaseAdmin
         .from('medicines')
-        .update({ stok: medicine.stok - item.jumlah })
-        .eq('id', item.medicine_id);
+        .update({ stok: newStock })
+        .eq('id', medicineId);
+      
+      if (updateError) {
+        console.error('Update stock error:', updateError);
+        throw updateError;
+      }
+      
+      console.log(`Stock updated: ${medicineId} from ${currentMedicine.stok} to ${newStock}`);
     }
     
     res.status(201).json({ success: true, data: order[0] });
+    
   } catch (error) {
     console.error('Error creating order:', error);
     res.status(500).json({ success: false, message: error.message });
@@ -106,6 +136,7 @@ export const getOrdersByUser = async (req, res) => {
     if (error) throw error;
     res.json({ success: true, data });
   } catch (error) {
+    console.error('Error getting orders:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -128,6 +159,7 @@ export const getOrderById = async (req, res) => {
     if (error) throw error;
     res.json({ success: true, data });
   } catch (error) {
+    console.error('Error getting order:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -146,6 +178,7 @@ export const updateOrderStatus = async (req, res) => {
     if (error) throw error;
     res.json({ success: true, data: data[0] });
   } catch (error) {
+    console.error('Error updating order status:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

@@ -14,7 +14,6 @@ const DashboardPatient = () => {
   const [selectedCategory, setSelectedCategory] = useState("Semua");
   const [doctors, setDoctors] = useState([]);
   const [doctorsLoading, setDoctorsLoading] = useState(true);
-  const [doctorSchedules, setDoctorSchedules] = useState({});
   const [unreadCount, setUnreadCount] = useState(0);
   const [pendingPaymentCount, setPendingPaymentCount] = useState(0);
 
@@ -69,42 +68,26 @@ const DashboardPatient = () => {
     return () => clearInterval(interval);
   }, [user]);
 
-  // Fungsi untuk mengambil jadwal dokter
-  const fetchDoctorSchedules = async (doctorId) => {
-    try {
-      const response = await api.get(`/doctor-schedules/doctor/${doctorId}`);
-      return response.data.data || [];
-    } catch (error) {
-      console.error("Error fetching doctor schedule:", error);
-      return [];
-    }
-  };
-
-  // Fetch doctors untuk rekomendasi
+  // Fetch doctors LANGSUNG dari tabel doctors dengan foto
   const fetchDoctors = async () => {
     try {
       const response = await api.get("/doctors");
-      console.log("Doctors data:", response.data);
+      console.log("Doctors data from API:", response.data);
 
-      const { data: profiles } = await api.get("/profiles");
+      // Data dokter sudah lengkap dari backend (termasuk foto dari join)
+      const doctorsList = response.data.data || [];
 
-      const doctorsWithPhotos = (response.data.data || []).map((doctor) => {
-        const profile = profiles.data.find((p) => p.id === doctor.user_id);
-        return {
-          ...doctor,
-          foto_url: doctor.foto_url || profile?.foto_url || null,
-        };
-      });
+      // Proses foto_url jika perlu (tambahkan base URL jika path relatif)
+      const processedDoctors = doctorsList.map((doctor) => ({
+        ...doctor,
+        foto: doctor.foto
+          ? doctor.foto.startsWith("http")
+            ? doctor.foto
+            : `${process.env.REACT_APP_API_URL || "http://localhost:8000"}/storage/${doctor.foto}`
+          : null,
+      }));
 
-      setDoctors(doctorsWithPhotos);
-
-      // Ambil jadwal untuk setiap dokter
-      const schedulesMap = {};
-      for (const doctor of doctorsWithPhotos) {
-        const schedules = await fetchDoctorSchedules(doctor.id);
-        schedulesMap[doctor.id] = schedules;
-      }
-      setDoctorSchedules(schedulesMap);
+      setDoctors(processedDoctors);
     } catch (error) {
       console.error("Error fetching doctors:", error);
       setDoctors([]);
@@ -279,46 +262,50 @@ const DashboardPatient = () => {
     return new Intl.NumberFormat("id-ID").format(value || 0);
   };
 
-  // Helper untuk jadwal
-  const getDayName = (dayNumber) => {
-    const days = {
-      1: "Senin",
-      2: "Selasa",
-      3: "Rabu",
-      4: "Kamis",
-      5: "Jumat",
-      6: "Sabtu",
-      7: "Minggu",
-    };
-    return days[dayNumber] || "";
-  };
-
-  const formatTime = (time) => {
-    if (!time) return "";
-    return time.substring(0, 5);
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Hero Section */}
-      <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white">
-        <div className="container mx-auto px-6 py-12">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
+      {/* Hero Section dengan Background Hijau */}
+      <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 text-white relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10">
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+              backgroundRepeat: "repeat",
+            }}
+          ></div>
+        </div>
+        <div className="container mx-auto px-6 py-16 relative z-10">
           <div className="flex justify-between items-center flex-wrap gap-6">
             <div className="max-w-2xl">
-              <h1 className="text-3xl md:text-4xl font-bold mb-3">
-                Membantu Anda Merawat Kesehatan dengan Mudah
+              <h1 className="text-4xl md:text-5xl font-bold mb-4">
+                Selamat Datang,{" "}
+                <span className="text-green-200">
+                  {user?.nama || "Pasien"}!
+                </span>
               </h1>
-              <p className="text-emerald-100 text-lg">
+              <p className="text-green-100 text-lg">
+                Membantu Anda Merawat Kesehatan dengan Mudah
+              </p>
+              <p className="text-green-100/80 text-sm mt-2">
                 Konsultasi online dengan dokter profesional dan beli obat tanpa
                 ribet
               </p>
             </div>
-            <button
-              onClick={() => navigate("/doctors")}
-              className="bg-white text-emerald-600 px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition"
-            >
-              Mulai Konsultasi →
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => navigate("/cart")}
+                className="bg-white/20 backdrop-blur-sm text-white px-6 py-3 rounded-xl font-semibold hover:bg-white/30 transition flex items-center gap-2"
+              >
+                🛒 Keranjang ({cart.length})
+              </button>
+              <button
+                onClick={() => navigate("/doctors")}
+                className="bg-white text-green-600 px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition hover:bg-green-50"
+              >
+                Mulai Konsultasi →
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -327,54 +314,60 @@ const DashboardPatient = () => {
       <div className="container mx-auto px-6 py-12">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-xl font-bold text-gray-800">
-              📋 Layanan Kesehatan
+            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+              <span className="text-3xl">📋</span> Layanan Kesehatan
             </h2>
-            <p className="text-gray-400 text-sm">
+            <p className="text-gray-500 text-sm mt-1">
               Pilih layanan kesehatan yang Anda butuhkan
             </p>
           </div>
           <button
             onClick={() => navigate("/medicines")}
-            className="text-emerald-600 text-sm font-medium hover:text-emerald-700"
+            className="text-green-600 text-sm font-medium hover:text-green-700 flex items-center gap-1"
           >
-            Lihat semua →
+            Lihat semua <span>→</span>
           </button>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
           <div
-            className="bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl p-6 text-white shadow-lg hover:shadow-xl transition cursor-pointer"
+            className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-6 text-white shadow-lg hover:shadow-xl transition-all hover:scale-105 cursor-pointer"
             onClick={() => navigate("/consultation")}
           >
-            <div className="text-4xl mb-3">💬</div>
+            <div className="text-5xl mb-3">💬</div>
             <h3 className="font-semibold text-lg">Konsultasi Dokter</h3>
-            <p className="text-emerald-100 text-sm mt-1">
+            <p className="text-green-100 text-sm mt-1">
               Chat dengan dokter ahli
             </p>
+            {unreadCount > 0 && (
+              <span className="inline-block mt-2 bg-yellow-400 text-yellow-900 text-xs px-2 py-1 rounded-full">
+                {unreadCount} pesan baru
+              </span>
+            )}
           </div>
           <div
-            className="bg-white rounded-2xl p-6 shadow-md border border-gray-100 hover:shadow-lg transition cursor-pointer"
+            className="bg-white rounded-2xl p-6 shadow-md border border-gray-100 hover:shadow-xl transition-all hover:scale-105 cursor-pointer"
             onClick={() => navigate("/medicines")}
           >
-            <div className="text-4xl mb-3">💊</div>
+            <div className="text-5xl mb-3">💊</div>
             <h3 className="font-semibold text-gray-800">Beli Obat</h3>
             <p className="text-gray-400 text-sm mt-1">
               Obat asli harga terjangkau
             </p>
           </div>
           <div
-            className="bg-white rounded-2xl p-6 shadow-md border border-gray-100 hover:shadow-lg transition cursor-pointer"
+            className="bg-white rounded-2xl p-6 shadow-md border border-gray-100 hover:shadow-xl transition-all hover:scale-105 cursor-pointer"
             onClick={() => navigate("/orders")}
           >
-            <div className="text-4xl mb-3">📦</div>
+            <div className="text-5xl mb-3">📦</div>
             <h3 className="font-semibold text-gray-800">Riwayat Pesanan</h3>
             <p className="text-gray-400 text-sm mt-1">Cek status pesanan</p>
+            {/* Notifikasi pendingPaymentCount dihapus */}
           </div>
           <div
-            className="bg-white rounded-2xl p-6 shadow-md border border-gray-100 hover:shadow-lg transition cursor-pointer"
+            className="bg-white rounded-2xl p-6 shadow-md border border-gray-100 hover:shadow-xl transition-all hover:scale-105 cursor-pointer"
             onClick={() => navigate("/apply-doctor")}
           >
-            <div className="text-4xl mb-3">👨‍⚕️</div>
+            <div className="text-5xl mb-3">👨‍⚕️</div>
             <h3 className="font-semibold text-gray-800">Jadi Dokter</h3>
             <p className="text-gray-400 text-sm mt-1">
               Bergabung sebagai mitra
@@ -383,169 +376,120 @@ const DashboardPatient = () => {
         </div>
       </div>
 
-      {/* Rekomendasi Dokter - DENGAN JADWAL */}
-      <div className="bg-gray-100 py-12">
-        <div className="container mx-auto px-6">
+      {/* Rekomendasi Dokter */}
+      <div className="py-12 relative">
+        <div className="absolute inset-0 bg-gradient-to-r from-green-100/50 via-emerald-100/30 to-teal-100/50"></div>
+        <div className="container mx-auto px-6 relative z-10">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-xl font-bold text-gray-800">
-                👨‍⚕️ Rekomendasi Dokter
+              <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                <span className="text-3xl">👨‍⚕️</span> Rekomendasi Dokter
               </h2>
-              <p className="text-gray-400 text-sm">
+              <p className="text-gray-500 text-sm mt-1">
                 Dokter terbaik untuk kesehatan Anda
               </p>
             </div>
             <button
               onClick={() => navigate("/doctors")}
-              className="text-emerald-600 text-sm font-medium hover:text-emerald-700"
+              className="text-green-600 text-sm font-medium hover:text-green-700 flex items-center gap-1"
             >
-              Lihat semua →
+              Lihat semua <span>→</span>
             </button>
           </div>
 
           {doctorsLoading ? (
             <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
             </div>
           ) : doctors.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-2xl">
-              <div className="text-5xl mb-3">👨‍⚕️</div>
+            <div className="text-center py-12 bg-white rounded-2xl shadow-sm">
+              <div className="text-6xl mb-3">👨‍⚕️</div>
               <p className="text-gray-400">Belum ada dokter yang terdaftar</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {doctors.slice(0, 4).map((doctor) => {
-                const schedules = doctorSchedules[doctor.id] || [];
-                const today = new Date().getDay();
-                const todayIndex = today === 0 ? 7 : today;
-                const todaySchedule = schedules.find(
-                  (s) => s.hari === todayIndex && s.status === "aktif",
-                );
-
-                return (
-                  <div
-                    key={doctor.id}
-                    className="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-lg transition flex flex-col"
-                  >
-                    <div className="bg-gradient-to-r from-emerald-500 to-teal-500 p-4 text-white">
-                      <div className="flex justify-between items-start">
-                        <img
-                          src={
-                            doctor.foto_url ||
-                            getAvatarUrl(doctor.nama_dokter || "D", "ffffff")
-                          }
-                          alt={doctor.nama_dokter}
-                          className="w-12 h-12 rounded-full object-cover border-2 border-white"
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = getAvatarUrl(
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {doctors.slice(0, 4).map((doctor) => (
+                <div
+                  key={doctor.id}
+                  className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all hover:scale-105 flex flex-col group"
+                >
+                  <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-5 text-white relative">
+                    <div className="flex justify-between items-start">
+                      <div className="relative">
+                        {doctor.foto ? (
+                          <img
+                            src={doctor.foto}
+                            alt={doctor.nama_dokter}
+                            className="w-16 h-16 rounded-full object-cover border-3 border-white shadow-lg"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = getAvatarUrl(
+                                doctor.nama_dokter || "D",
+                                "ffffff",
+                              );
+                            }}
+                          />
+                        ) : (
+                          <img
+                            src={getAvatarUrl(
                               doctor.nama_dokter || "D",
                               "ffffff",
-                            );
-                          }}
-                        />
-                        <span className="bg-white/20 px-2 py-1 rounded-lg text-xs">
-                          ⭐ 4.9
-                        </span>
+                            )}
+                            alt={doctor.nama_dokter}
+                            className="w-16 h-16 rounded-full object-cover border-3 border-white shadow-lg"
+                          />
+                        )}
+                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-400 rounded-full border-2 border-white"></div>
                       </div>
-                      <h3 className="font-bold text-lg mt-3 line-clamp-1">
-                        {doctor.nama_dokter}
-                      </h3>
-                      <p className="text-emerald-100 text-sm line-clamp-1">
-                        {doctor.spesialis}
+                      <span className="bg-white/20 backdrop-blur-sm px-2.5 py-1 rounded-full text-xs font-semibold">
+                        ⭐ 4.9
+                      </span>
+                    </div>
+                    <h3 className="font-bold text-lg mt-3 line-clamp-1">
+                      {doctor.nama_dokter}
+                    </h3>
+                    <p className="text-green-100 text-sm line-clamp-1">
+                      {doctor.spesialis}
+                    </p>
+                  </div>
+
+                  <div className="p-4 flex-1">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-gray-500 text-sm">
+                        💰 Biaya Konsultasi
+                      </span>
+                      <span className="text-green-600 font-bold">
+                        Rp {formatRupiah(doctor.biaya_konsultasi)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-gray-500 text-sm">⭐ Rating</span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-yellow-500">★★★★★</span>
+                        <span className="text-gray-500 text-sm">(4.9)</span>
+                      </div>
+                    </div>
+                    <div className="border-t border-gray-100 pt-3 mt-2">
+                      <p className="text-xs text-gray-500 flex items-center gap-1">
+                        <span>📅</span> Jadwal:{" "}
+                        {doctor.jadwal_praktik || "Hubungi dokter"}
+                      </p>
+                      <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                        <span>👥</span> Pasien: 100+ orang
                       </p>
                     </div>
-
-                    <div className="p-4 flex-1">
-                      {/* Harga */}
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-gray-500 text-sm">
-                          💰 Biaya Konsultasi
-                        </span>
-                        <span className="text-emerald-600 font-bold">
-                          Rp {formatRupiah(doctor.biaya_konsultasi)}
-                        </span>
-                      </div>
-
-                      {/* Rating */}
-                      <div className="flex justify-between items-center mb-3">
-                        <span className="text-gray-500 text-sm">⭐ Rating</span>
-                        <span className="text-emerald-600 font-semibold">
-                          4.9 (100%)
-                        </span>
-                      </div>
-
-                      {/* JADWAL DOKTER */}
-                      <div className="border-t border-gray-100 pt-3 mt-2">
-                        <div className="flex items-center gap-1 mb-2">
-                          <span className="text-xs font-semibold text-gray-700">
-                            📅 Jadwal Praktik:
-                          </span>
-                        </div>
-
-                        {schedules.length === 0 ? (
-                          <p className="text-xs text-gray-400">
-                            Jadwal belum tersedia
-                          </p>
-                        ) : (
-                          <div className="space-y-1.5">
-                            {/* Tampilkan 2 jadwal pertama */}
-                            {schedules.slice(0, 2).map((schedule, idx) => (
-                              <div
-                                key={idx}
-                                className="flex items-center justify-between text-xs"
-                              >
-                                <span className="text-gray-600 font-medium">
-                                  {getDayName(schedule.hari)}
-                                </span>
-                                <span className="text-gray-500">
-                                  {formatTime(schedule.jam_mulai)} -{" "}
-                                  {formatTime(schedule.jam_selesai)}
-                                </span>
-                                {schedule.status === "aktif" ? (
-                                  <span className="text-green-500 text-[10px]">
-                                    ● Tersedia
-                                  </span>
-                                ) : (
-                                  <span className="text-red-400 text-[10px]">
-                                    ● Libur
-                                  </span>
-                                )}
-                              </div>
-                            ))}
-                            {schedules.length > 2 && (
-                              <p className="text-[10px] text-gray-400 text-center pt-1">
-                                +{schedules.length - 2} jadwal lainnya
-                              </p>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Jadwal Hari Ini */}
-                        {todaySchedule && (
-                          <div className="mt-2 bg-emerald-50 rounded-lg p-1.5 text-center">
-                            <p className="text-[10px] text-emerald-600 font-medium">
-                              🟢 Tersedia hari ini •{" "}
-                              {formatTime(todaySchedule.jam_mulai)} -{" "}
-                              {formatTime(todaySchedule.jam_selesai)}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Tombol Konsultasi */}
-                    <div className="p-4 pt-0 border-t border-gray-100 mt-auto">
-                      <button
-                        onClick={() => handleConsultation(doctor)}
-                        className="w-full bg-emerald-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-emerald-700 transition flex items-center justify-center gap-2"
-                      >
-                        <span>💬</span> Konsultasi
-                      </button>
-                    </div>
                   </div>
-                );
-              })}
+
+                  <div className="p-4 pt-0 border-t border-gray-100 mt-auto">
+                    <button
+                      onClick={() => handleConsultation(doctor)}
+                      className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2.5 rounded-xl text-sm font-medium hover:from-green-600 hover:to-emerald-700 transition flex items-center justify-center gap-2 shadow-md"
+                    >
+                      <span>💬</span> Konsultasi Sekarang
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -555,23 +499,23 @@ const DashboardPatient = () => {
       <div className="container mx-auto px-6 py-12">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-xl font-bold text-gray-800">
-              📂 Kategori Obat
+            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+              <span className="text-3xl">📂</span> Kategori Obat
             </h2>
-            <p className="text-gray-400 text-sm">
+            <p className="text-gray-500 text-sm mt-1">
               Pilih berdasarkan jenis obat
             </p>
           </div>
           <div className="flex gap-2">
             <button
               onClick={scrollLeft}
-              className="w-10 h-10 rounded-full bg-white shadow-md text-gray-600 hover:bg-emerald-50 transition"
+              className="w-10 h-10 rounded-full bg-white shadow-md text-gray-600 hover:bg-green-500 hover:text-white transition-all"
             >
               ◀
             </button>
             <button
               onClick={scrollRight}
-              className="w-10 h-10 rounded-full bg-white shadow-md text-gray-600 hover:bg-emerald-50 transition"
+              className="w-10 h-10 rounded-full bg-white shadow-md text-gray-600 hover:bg-green-500 hover:text-white transition-all"
             >
               ▶
             </button>
@@ -579,17 +523,17 @@ const DashboardPatient = () => {
         </div>
         <div
           ref={scrollContainerRef}
-          className="flex gap-3 overflow-x-auto pb-4"
+          className="flex gap-3 overflow-x-auto pb-4 scrollbar-thin"
           style={{ scrollbarWidth: "thin" }}
         >
           {categories.map((cat) => (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`px-5 py-2.5 rounded-xl whitespace-nowrap transition text-sm font-medium ${
+              className={`px-5 py-2.5 rounded-xl whitespace-nowrap transition-all text-sm font-medium ${
                 selectedCategory === cat
-                  ? "bg-emerald-600 text-white shadow-md"
-                  : "bg-white border border-gray-200 text-gray-600 hover:border-emerald-300"
+                  ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-md"
+                  : "bg-white border border-gray-200 text-gray-600 hover:border-green-400 hover:shadow-md"
               }`}
             >
               {getCategoryIcon(cat)} {cat}
@@ -598,7 +542,7 @@ const DashboardPatient = () => {
         </div>
         <div className="text-xs text-gray-400 mt-3">
           Menampilkan{" "}
-          <span className="font-medium text-emerald-600">
+          <span className="font-medium text-green-600">
             {filteredMedicines.length}
           </span>{" "}
           obat
@@ -606,14 +550,14 @@ const DashboardPatient = () => {
       </div>
 
       {/* Daftar Obat */}
-      <div className="container mx-auto px-6 pb-12">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
+      <div className="container mx-auto px-6 pb-16">
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+          <div className="px-6 py-4 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-gray-100">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-md">
                   <svg
-                    className="w-4 h-4 text-emerald-600"
+                    className="w-5 h-5 text-white"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -626,33 +570,39 @@ const DashboardPatient = () => {
                     />
                   </svg>
                 </div>
-                <h2 className="font-semibold text-gray-800">
-                  💊 Obat Tersedia
-                </h2>
+                <div>
+                  <h2 className="font-bold text-gray-800 text-lg">
+                    💊 Obat Tersedia
+                  </h2>
+                  <p className="text-gray-500 text-xs">
+                    Obat asli, terjamin kualitasnya
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => navigate("/medicines")}
-                className="text-xs text-emerald-600 hover:text-emerald-700"
+                className="text-sm text-green-600 hover:text-green-700 font-medium flex items-center gap-1"
               >
-                Lihat semua →
+                Lihat semua <span>→</span>
               </button>
             </div>
           </div>
-          <div className="p-5">
+          <div className="p-6">
             {loading ? (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto"></div>
+              <div className="text-center py-16">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+                <p className="text-gray-400 mt-3">Memuat data obat...</p>
               </div>
             ) : currentItems.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="text-5xl mb-2">📦</div>
+              <div className="text-center py-16">
+                <div className="text-6xl mb-3">📦</div>
                 <p className="text-gray-400">
                   Tidak ada obat dalam kategori {selectedCategory}
                 </p>
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                   {currentItems.map((medicine) => (
                     <MedicineCard
                       key={medicine.id}
@@ -662,21 +612,44 @@ const DashboardPatient = () => {
                   ))}
                 </div>
                 {totalPages > 1 && (
-                  <div className="flex justify-center items-center gap-4 mt-6 pt-4 border-t border-gray-100">
+                  <div className="flex justify-center items-center gap-4 mt-8 pt-6 border-t border-gray-100">
                     <button
                       onClick={goToPrevPage}
                       disabled={currentPage === 1}
-                      className={`px-4 py-2 rounded-xl text-sm font-medium transition ${currentPage === 1 ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-emerald-500 hover:bg-emerald-600 text-white"}`}
+                      className={`px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                        currentPage === 1
+                          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          : "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-md"
+                      }`}
                     >
                       ← Sebelumnya
                     </button>
-                    <span className="text-sm text-gray-500">
-                      Halaman {currentPage} dari {totalPages}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {[...Array(totalPages)].map((_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            setCurrentPage(idx + 1);
+                            window.scrollTo({ top: 0, behavior: "smooth" });
+                          }}
+                          className={`w-8 h-8 rounded-lg text-sm font-medium transition-all ${
+                            currentPage === idx + 1
+                              ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-md"
+                              : "bg-gray-100 text-gray-600 hover:bg-green-100"
+                          }`}
+                        >
+                          {idx + 1}
+                        </button>
+                      ))}
+                    </div>
                     <button
                       onClick={goToNextPage}
                       disabled={currentPage === totalPages}
-                      className={`px-4 py-2 rounded-xl text-sm font-medium transition ${currentPage === totalPages ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-emerald-500 hover:bg-emerald-600 text-white"}`}
+                      className={`px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                        currentPage === totalPages
+                          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          : "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-md"
+                      }`}
                     >
                       Selanjutnya →
                     </button>
@@ -687,6 +660,40 @@ const DashboardPatient = () => {
           </div>
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="bg-gray-800 text-white py-8">
+        <div className="container mx-auto px-6">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div className="mb-4 md:mb-0">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
+                  <svg
+                    className="w-5 h-5 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                    />
+                  </svg>
+                </div>
+                <span className="font-bold text-lg">T-Medic</span>
+              </div>
+              <p className="text-gray-400 text-sm">
+                Solusi kesehatan modern untuk Anda
+              </p>
+            </div>
+            <div className="text-center text-gray-400 text-sm">
+              © 2024 T-Medic. All rights reserved.
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

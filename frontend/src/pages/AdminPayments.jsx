@@ -2,7 +2,9 @@ import React, { useState, useEffect } from "react";
 import api from "../utils/api";
 
 const AdminPayments = () => {
-  const [payments, setPayments] = useState([]);
+  const [activeTab, setActiveTab] = useState("product");
+  const [productPayments, setProductPayments] = useState([]);
+  const [consultationPayments, setConsultationPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(null);
 
@@ -11,29 +13,62 @@ const AdminPayments = () => {
   const itemsPerPage = 10;
 
   useEffect(() => {
-    fetchPayments();
-  }, []);
+    if (activeTab === "product") {
+      fetchProductPayments();
+    } else {
+      fetchConsultationPayments();
+    }
+  }, [activeTab]);
 
-  const fetchPayments = async () => {
+  const fetchProductPayments = async () => {
     try {
       const res = await api.get("/payments");
-      setPayments(res.data.data || []);
+      setProductPayments(res.data.data || []);
     } catch (err) {
-      console.error("Error fetching payments:", err);
+      console.error("Error fetching product payments:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const verifyPayment = async (id, status) => {
-    if (!confirm(`Konfirmasi pembayaran ini?`)) return;
+  const fetchConsultationPayments = async () => {
+    try {
+      const res = await api.get("/consultation-payments/admin/all");
+      setConsultationPayments(res.data.data || []);
+    } catch (err) {
+      console.error("Error fetching consultation payments:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyProductPayment = async (id, status) => {
+    if (!confirm(`Konfirmasi pembayaran produk ini?`)) return;
     setProcessing(id);
     try {
       await api.put(`/payments/${id}/verify`, { payment_status: status });
       alert(
-        `✅ Pembayaran ${status === "verified" ? "diverifikasi" : "ditolak"}`,
+        `✅ Pembayaran produk ${status === "verified" ? "diverifikasi" : "ditolak"}`,
       );
-      fetchPayments();
+      fetchProductPayments();
+    } catch (err) {
+      alert(err.response?.data?.message || "Gagal memverifikasi");
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  const verifyConsultationPayment = async (id, status) => {
+    if (!confirm(`Konfirmasi pembayaran konsultasi ini?`)) return;
+    setProcessing(id);
+    try {
+      await api.put(`/consultation-payments/${id}/verify`, {
+        payment_status: status,
+      });
+      alert(
+        `✅ Pembayaran konsultasi ${status === "paid" ? "diverifikasi" : "ditolak"}`,
+      );
+      fetchConsultationPayments();
     } catch (err) {
       alert(err.response?.data?.message || "Gagal memverifikasi");
     } finally {
@@ -47,16 +82,20 @@ const AdminPayments = () => {
       verified: "bg-green-100 text-green-700",
       rejected: "bg-red-100 text-red-700",
       completed: "bg-blue-100 text-blue-700",
+      paid: "bg-green-100 text-green-700",
+      failed: "bg-red-100 text-red-700",
     };
     return badges[status] || "bg-gray-100";
   };
 
   const getStatusText = (status) => {
     const texts = {
-      pending: "Menunggu Verifikasi",
-      verified: "Diverifikasi",
-      rejected: "Ditolak",
-      completed: "Selesai",
+      pending: "⏳ Menunggu Verifikasi",
+      verified: "✅ Diverifikasi",
+      rejected: "❌ Ditolak",
+      completed: "✅ Selesai",
+      paid: "✅ Diverifikasi",
+      failed: "❌ Ditolak",
     };
     return texts[status] || status;
   };
@@ -66,10 +105,15 @@ const AdminPayments = () => {
   };
 
   // Pagination logic
+  const currentPayments =
+    activeTab === "product" ? productPayments : consultationPayments;
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentPayments = payments.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(payments.length / itemsPerPage);
+  const paginatedPayments = currentPayments.slice(
+    indexOfFirstItem,
+    indexOfLastItem,
+  );
+  const totalPages = Math.ceil(currentPayments.length / itemsPerPage);
 
   const goToNextPage = () => {
     if (currentPage < totalPages) {
@@ -83,24 +127,45 @@ const AdminPayments = () => {
     }
   };
 
+  // Reset page when tab changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab]);
+
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-emerald-100 overflow-hidden">
-      <div className="bg-emerald-50 px-6 py-4 border-b border-emerald-100">
-        <h3 className="text-lg font-semibold text-emerald-800">
-          💰 Manajemen Pembayaran
-        </h3>
-        <p className="text-sm text-gray-500">
-          Total: {payments.length} pembayaran
-        </p>
+    <div className="bg-white rounded-2xl shadow-sm border border-emerald-100 overflow-hidden">
+      {/* Tabs */}
+      <div className="flex border-b border-gray-200 bg-gray-50">
+        <button
+          onClick={() => setActiveTab("product")}
+          className={`px-6 py-3 text-sm font-medium transition ${
+            activeTab === "product"
+              ? "text-emerald-600 border-b-2 border-emerald-600 bg-white"
+              : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          💊 Pembayaran Produk
+        </button>
+        <button
+          onClick={() => setActiveTab("consultation")}
+          className={`px-6 py-3 text-sm font-medium transition ${
+            activeTab === "consultation"
+              ? "text-emerald-600 border-b-2 border-emerald-600 bg-white"
+              : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          💬 Pembayaran Konsultasi
+        </button>
       </div>
 
+      {/* Content */}
       <div className="overflow-x-auto">
         {loading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto"></div>
             <p className="text-gray-400 mt-2">Memuat data...</p>
           </div>
-        ) : payments.length === 0 ? (
+        ) : currentPayments.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-5xl mb-2">💰</div>
             <p className="text-gray-400">Belum ada pembayaran</p>
@@ -114,11 +179,18 @@ const AdminPayments = () => {
                     Tanggal
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    User
+                    User / Pasien
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Order ID
-                  </th>
+                  {activeTab === "product" && (
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Order ID
+                    </th>
+                  )}
+                  {activeTab === "consultation" && (
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Dokter
+                    </th>
+                  )}
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Jumlah
                   </th>
@@ -137,17 +209,26 @@ const AdminPayments = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {currentPayments.map((payment) => (
+                {paginatedPayments.map((payment) => (
                   <tr key={payment.id} className="hover:bg-gray-50 transition">
                     <td className="px-4 py-3 text-sm text-gray-600">
                       {new Date(payment.created_at).toLocaleDateString("id-ID")}
                     </td>
                     <td className="px-4 py-3 text-sm font-medium text-gray-800">
-                      {payment.profiles?.nama}
+                      {activeTab === "product"
+                        ? payment.profiles?.nama
+                        : payment.profiles?.nama}
                     </td>
-                    <td className="px-4 py-3 text-sm font-mono text-gray-500">
-                      {payment.order_id?.slice(0, 8)}...
-                    </td>
+                    {activeTab === "product" && (
+                      <td className="px-4 py-3 text-sm font-mono text-gray-500">
+                        {payment.order_id?.slice(0, 8)}...
+                      </td>
+                    )}
+                    {activeTab === "consultation" && (
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {payment.doctors?.nama_dokter}
+                      </td>
+                    )}
                     <td className="px-4 py-3 text-sm font-semibold text-emerald-600">
                       Rp {formatRupiah(payment.amount)}
                     </td>
@@ -184,7 +265,9 @@ const AdminPayments = () => {
                         <div className="flex gap-2">
                           <button
                             onClick={() =>
-                              verifyPayment(payment.id, "verified")
+                              activeTab === "product"
+                                ? verifyProductPayment(payment.id, "verified")
+                                : verifyConsultationPayment(payment.id, "paid")
                             }
                             disabled={processing === payment.id}
                             className="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1 rounded-lg text-xs font-medium transition disabled:opacity-50"
@@ -193,7 +276,12 @@ const AdminPayments = () => {
                           </button>
                           <button
                             onClick={() =>
-                              verifyPayment(payment.id, "rejected")
+                              activeTab === "product"
+                                ? verifyProductPayment(payment.id, "rejected")
+                                : verifyConsultationPayment(
+                                    payment.id,
+                                    "failed",
+                                  )
                             }
                             disabled={processing === payment.id}
                             className="bg-rose-500 hover:bg-rose-600 text-white px-3 py-1 rounded-lg text-xs font-medium transition disabled:opacity-50"
@@ -202,12 +290,14 @@ const AdminPayments = () => {
                           </button>
                         </div>
                       )}
-                      {payment.payment_status === "verified" && (
+                      {(payment.payment_status === "verified" ||
+                        payment.payment_status === "paid") && (
                         <span className="text-emerald-600 text-sm">
                           ✅ Diverifikasi
                         </span>
                       )}
-                      {payment.payment_status === "rejected" && (
+                      {(payment.payment_status === "rejected" ||
+                        payment.payment_status === "failed") && (
                         <span className="text-rose-600 text-sm">
                           ❌ Ditolak
                         </span>

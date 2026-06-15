@@ -28,10 +28,27 @@ export const getConsultationsByUser = async (req, res) => {
       .from('consultations')
       .select(`
         *,
-        doctors (id, user_id, nama_dokter, spesialis),
+        doctors!doctor_id (
+          id,
+          user_id,
+          nama_dokter,
+          spesialis,
+          foto_url,
+          biaya_konsultasi,
+          jadwal_praktik
+        ),
+        consultation_payments (
+          id,
+          payment_status,
+          amount
+        ),
         prescriptions (
           *,
-          medicines (id, nama_obat, harga)
+          medicines (
+            id,
+            nama_obat,
+            harga
+          )
         )
       `)
       .eq('user_id', userId)

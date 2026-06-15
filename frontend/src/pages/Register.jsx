@@ -128,12 +128,28 @@ const Register = () => {
 
   if (showVerification) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 flex items-center justify-center py-8 px-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
+      <div className="min-h-screen bg-gradient-to-br from-green-400 via-emerald-500 to-teal-500 flex items-center justify-center py-8 px-4 relative overflow-hidden">
+        {/* Soft Pattern */}
+        <div className="absolute inset-0 opacity-5">
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+              backgroundRepeat: "repeat",
+            }}
+          ></div>
+        </div>
+
+        {/* Gradient Orbs */}
+        <div className="absolute top-0 left-0 w-96 h-96 bg-green-300 rounded-full filter blur-3xl opacity-30"></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-teal-300 rounded-full filter blur-3xl opacity-30"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-emerald-300 rounded-full filter blur-3xl opacity-20"></div>
+
+        <div className="max-w-md w-full bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-8 text-center z-10 relative">
           <div className="flex justify-center mb-4">
-            <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center">
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
               <svg
-                className="w-10 h-10 text-emerald-600"
+                className="w-10 h-10 text-green-600"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -147,15 +163,13 @@ const Register = () => {
               </svg>
             </div>
           </div>
-          <h2 className="text-2xl font-bold text-emerald-800 mb-2">
+          <h2 className="text-2xl font-bold text-green-800 mb-2">
             📧 Cek Email Anda
           </h2>
           <p className="text-gray-600 mb-3">
             Kami telah mengirimkan link verifikasi ke:
           </p>
-          <p className="font-semibold text-emerald-600 mb-4">
-            {formData.email}
-          </p>
+          <p className="font-semibold text-green-600 mb-4">{formData.email}</p>
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 text-left">
             <p className="text-amber-700 text-sm font-medium mb-2">
               📌 Perhatian:
@@ -171,19 +185,19 @@ const Register = () => {
           <button
             onClick={resendEmail}
             disabled={resendLoading}
-            className="text-emerald-600 hover:text-emerald-700 text-sm font-medium mb-3"
+            className="text-green-600 hover:text-green-700 text-sm font-medium mb-3"
           >
             {resendLoading ? "Mengirim..." : "📧 Kirim Ulang Email Verifikasi"}
           </button>
           <div className="text-center mt-3">
             <p className="text-gray-500 text-sm">
               Mengalihkan ke login dalam{" "}
-              <span className="font-bold text-emerald-600">{countdown}</span>{" "}
+              <span className="font-bold text-green-600">{countdown}</span>{" "}
               detik
             </p>
             <div className="w-full bg-gray-200 rounded-full h-1 mt-2">
               <div
-                className="bg-emerald-600 h-1 rounded-full transition-all duration-1000"
+                className="bg-green-600 h-1 rounded-full transition-all duration-1000"
                 style={{ width: `${(countdown / 5) * 100}%` }}
               ></div>
             </div>
@@ -200,11 +214,58 @@ const Register = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center py-8 px-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
+    <div className="min-h-screen bg-gradient-to-br from-green-400 via-emerald-500 to-teal-500 flex items-center justify-center py-8 px-4 relative overflow-hidden">
+      {/* Subtle Grid Pattern */}
+      <div className="absolute inset-0 opacity-5">
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+            backgroundRepeat: "repeat",
+          }}
+        ></div>
+      </div>
+
+      {/* Fresh Gradient Orbs */}
+      <div className="absolute top-0 left-0 w-96 h-96 bg-green-300 rounded-full filter blur-3xl opacity-30"></div>
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-teal-300 rounded-full filter blur-3xl opacity-30"></div>
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-emerald-300 rounded-full filter blur-3xl opacity-20"></div>
+
+      {/* Medical Line Art */}
+      <div className="absolute inset-0 opacity-5">
+        <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern
+              id="medicalLines"
+              x="0"
+              y="0"
+              width="120"
+              height="120"
+              patternUnits="userSpaceOnUse"
+            >
+              <path
+                d="M60 30 L65 45 L80 45 L80 55 L65 55 L60 70 L55 55 L40 55 L40 45 L55 45 Z"
+                fill="none"
+                stroke="white"
+                strokeWidth="1"
+              />
+              <circle cx="60" cy="60" r="2" fill="white" />
+              <path
+                d="M20 20 L22 26 L28 26 L24 30 L26 36 L20 32 L14 36 L16 30 L12 26 L18 26 Z"
+                fill="none"
+                stroke="white"
+                strokeWidth="0.5"
+              />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#medicalLines)" />
+        </svg>
+      </div>
+
+      <div className="max-w-md w-full bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-8 z-10 relative">
         <div className="text-center mb-6">
           <div className="flex justify-center mb-3">
-            <div className="w-16 h-16 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center shadow-md">
+            <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-md">
               <svg
                 className="w-8 h-8 text-white"
                 fill="none"
@@ -243,7 +304,7 @@ const Register = () => {
               value={formData.nama}
               onChange={handleChange}
               onBlur={() => setTouched({ ...touched, nama: true })}
-              className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 ${touched.nama && errors.nama ? "border-red-400 bg-red-50" : "border-gray-200"}`}
+              className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 ${touched.nama && errors.nama ? "border-red-400 bg-red-50" : "border-gray-200"}`}
               placeholder="Nama lengkap"
             />
             {touched.nama && errors.nama && (
@@ -261,7 +322,7 @@ const Register = () => {
               value={formData.email}
               onChange={handleChange}
               onBlur={() => setTouched({ ...touched, email: true })}
-              className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 ${touched.email && errors.email ? "border-red-400 bg-red-50" : "border-gray-200"}`}
+              className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 ${touched.email && errors.email ? "border-red-400 bg-red-50" : "border-gray-200"}`}
               placeholder="nama@email.com"
             />
             {touched.email && errors.email && (
@@ -279,7 +340,7 @@ const Register = () => {
               value={formData.password}
               onChange={handleChange}
               onBlur={() => setTouched({ ...touched, password: true })}
-              className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 ${touched.password && errors.password ? "border-red-400 bg-red-50" : "border-gray-200"}`}
+              className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 ${touched.password && errors.password ? "border-red-400 bg-red-50" : "border-gray-200"}`}
               placeholder="Minimal 6 karakter"
             />
             {touched.password && errors.password && (
@@ -297,7 +358,7 @@ const Register = () => {
               value={formData.confirmPassword}
               onChange={handleChange}
               onBlur={() => setTouched({ ...touched, confirmPassword: true })}
-              className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 ${touched.confirmPassword && errors.confirmPassword ? "border-red-400 bg-red-50" : "border-gray-200"}`}
+              className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 ${touched.confirmPassword && errors.confirmPassword ? "border-red-400 bg-red-50" : "border-gray-200"}`}
               placeholder="Masukkan ulang password"
             />
             {touched.confirmPassword && errors.confirmPassword && (
@@ -317,7 +378,7 @@ const Register = () => {
                 name="nomor_telepon"
                 value={formData.nomor_telepon}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
                 placeholder="08123456789"
               />
             </div>
@@ -330,7 +391,7 @@ const Register = () => {
                 name="alamat"
                 value={formData.alamat}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
                 placeholder="Kota"
               />
             </div>
@@ -339,7 +400,7 @@ const Register = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-semibold py-3 rounded-xl transition disabled:opacity-50 mt-2"
+            className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold py-3 rounded-xl transition disabled:opacity-50 mt-2 shadow-sm hover:shadow-md"
           >
             {loading ? "Memproses..." : "Daftar & Verifikasi Email"}
           </button>
@@ -348,9 +409,15 @@ const Register = () => {
         <div className="mt-6 pt-4 border-t text-center">
           <p className="text-gray-600 text-sm">
             Sudah punya akun?{" "}
-            <Link to="/login" className="text-emerald-600 font-semibold">
+            <Link to="/login" className="text-green-600 font-semibold">
               Login di sini
             </Link>
+          </p>
+        </div>
+
+        <div className="mt-4 text-center">
+          <p className="text-xs text-gray-400">
+            © 2024 T-Medic. All rights reserved.
           </p>
         </div>
       </div>

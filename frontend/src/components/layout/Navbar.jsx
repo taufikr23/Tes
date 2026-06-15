@@ -115,12 +115,6 @@ const Navbar = () => {
                 >
                   Admin Panel
                 </Link>
-                <Link
-                  to="/admin/applications"
-                  className="text-gray-600 hover:text-emerald-600 transition"
-                >
-                  Pengajuan Dokter
-                </Link>
               </>
             )}
             {isDoctor && (
@@ -270,21 +264,6 @@ const Navbar = () => {
                 </button>
 
                 {/* User Avatar */}
-                <div className="flex items-center gap-2 border-l pl-3">
-                  <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
-                    <span className="text-emerald-600 font-semibold text-sm">
-                      {user?.nama?.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <div className="hidden lg:block text-sm">
-                    <p className="font-medium text-gray-700">
-                      Halo, {user?.nama?.split(" ")[0]}
-                    </p>
-                    <p className="text-xs text-gray-400 capitalize">
-                      {user?.role}
-                    </p>
-                  </div>
-                </div>
 
                 <button
                   onClick={handleLogout}

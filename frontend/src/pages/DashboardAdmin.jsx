@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import api from "../utils/api";
+import AdminPayments from "./AdminPayments";
 
 const DashboardAdmin = () => {
   const [activeTab, setActiveTab] = useState("doctors");
@@ -7,7 +8,6 @@ const DashboardAdmin = () => {
   const [medicines, setMedicines] = useState([]);
   const [users, setUsers] = useState([]);
   const [applications, setApplications] = useState([]);
-  const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(null);
 
@@ -35,7 +35,6 @@ const DashboardAdmin = () => {
       fetchApplications();
       setCurrentPage(1);
     }
-    if (activeTab === "payments") fetchPayments();
   }, [activeTab]);
 
   // Hitung pagination
@@ -86,15 +85,6 @@ const DashboardAdmin = () => {
       setApplications(res.data.data);
     } catch (err) {
       console.error("Gagal ambil pengajuan:", err);
-    }
-  };
-
-  const fetchPayments = async () => {
-    try {
-      const res = await api.get("/payments");
-      setPayments(res.data.data || []);
-    } catch (err) {
-      console.error("Gagal ambil pembayaran:", err);
     }
   };
 
@@ -209,7 +199,6 @@ const DashboardAdmin = () => {
       fetchDoctors();
       fetchUsers();
 
-      // Jika user yang diapprove adalah user yang sedang login
       const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
       if (response.data?.user_id === currentUser.id) {
         alert("Role Anda telah berubah menjadi DOKTER. Silakan login kembali.");
@@ -241,29 +230,11 @@ const DashboardAdmin = () => {
     }
   };
 
-  // Verifikasi pembayaran
-  const verifyPayment = async (id, status) => {
-    if (!confirm(`Konfirmasi pembayaran ini?`)) return;
-    setProcessing(id);
-    try {
-      await api.put(`/payments/${id}/verify`, { payment_status: status });
-      alert(
-        `✅ Pembayaran ${status === "verified" ? "diverifikasi" : "ditolak"}`,
-      );
-      fetchPayments();
-    } catch (err) {
-      alert(err.response?.data?.message || "Gagal memverifikasi");
-    } finally {
-      setProcessing(null);
-    }
-  };
-
   const getStatusBadge = (status) => {
     const colors = {
       pending: "bg-yellow-100 text-yellow-800",
       approved: "bg-green-100 text-green-800",
       rejected: "bg-red-100 text-red-800",
-      verified: "bg-green-100 text-green-800",
     };
     return colors[status] || "bg-gray-100";
   };
@@ -273,27 +244,6 @@ const DashboardAdmin = () => {
       pending: "⏳ Menunggu",
       approved: "✅ Disetujui",
       rejected: "❌ Ditolak",
-      verified: "✅ Diverifikasi",
-    };
-    return texts[status] || status;
-  };
-
-  const getPaymentStatusBadge = (status) => {
-    const colors = {
-      pending: "bg-yellow-100 text-yellow-800",
-      verified: "bg-green-100 text-green-800",
-      rejected: "bg-red-100 text-red-800",
-      completed: "bg-blue-100 text-blue-800",
-    };
-    return colors[status] || "bg-gray-100";
-  };
-
-  const getPaymentStatusText = (status) => {
-    const texts = {
-      pending: "Menunggu Verifikasi",
-      verified: "Diverifikasi",
-      rejected: "Ditolak",
-      completed: "Selesai",
     };
     return texts[status] || status;
   };
@@ -734,99 +684,7 @@ const DashboardAdmin = () => {
         )}
 
         {/* PEMBAYARAN */}
-        {activeTab === "payments" && (
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-xl font-semibold mb-4">
-              💰 Manajemen Pembayaran
-            </h3>
-            {payments.length === 0 ? (
-              <p className="text-gray-400 text-center py-8">
-                Belum ada pembayaran
-              </p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th className="px-3 py-2 text-left">Tanggal</th>
-                      <th className="px-3 py-2 text-left">User</th>
-                      <th className="px-3 py-2 text-left">Order ID</th>
-                      <th className="px-3 py-2 text-left">Jumlah</th>
-                      <th className="px-3 py-2 text-left">Metode</th>
-                      <th className="px-3 py-2 text-left">Status</th>
-                      <th className="px-3 py-2 text-left">Bukti</th>
-                      <th className="px-3 py-2 text-left">Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {payments.map((payment) => (
-                      <tr key={payment.id} className="border-b">
-                        <td className="px-3 py-2 text-sm">
-                          {new Date(payment.created_at).toLocaleDateString(
-                            "id-ID",
-                          )}
-                        </td>
-                        <td className="px-3 py-2">{payment.profiles?.nama}</td>
-                        <td className="px-3 py-2 text-xs font-mono">
-                          {payment.order_id?.slice(0, 8)}...
-                        </td>
-                        <td className="px-3 py-2 font-semibold">
-                          Rp {formatRupiah(payment.amount)}
-                        </td>
-                        <td className="px-3 py-2 text-sm">
-                          {payment.payment_method}
-                        </td>
-                        <td className="px-3 py-2">
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs font-medium ${getPaymentStatusBadge(payment.payment_status)}`}
-                          >
-                            {getPaymentStatusText(payment.payment_status)}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2">
-                          {payment.payment_proof && (
-                            <a
-                              href={payment.payment_proof}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-500 hover:underline text-sm"
-                            >
-                              Lihat Bukti
-                            </a>
-                          )}
-                        </td>
-                        <td className="px-3 py-2">
-                          {payment.payment_status === "pending" && (
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() =>
-                                  verifyPayment(payment.id, "verified")
-                                }
-                                disabled={processing === payment.id}
-                                className="bg-green-500 text-white px-2 py-1 rounded text-xs"
-                              >
-                                Verifikasi
-                              </button>
-                              <button
-                                onClick={() =>
-                                  verifyPayment(payment.id, "rejected")
-                                }
-                                disabled={processing === payment.id}
-                                className="bg-red-500 text-white px-2 py-1 rounded text-xs"
-                              >
-                                Tolak
-                              </button>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
+        {activeTab === "payments" && <AdminPayments />}
       </div>
     </div>
   );
