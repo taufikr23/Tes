@@ -18,7 +18,8 @@ export const createOrder = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Item pesanan tidak boleh kosong' });
     }
     
-    // VALIDASI STOCK
+    // VALIDASI STOCK - Simpan data stok sementara
+    const stockData = [];
     for (const item of items) {
       const { data: medicine, error } = await supabaseAdmin
         .from('medicines')
@@ -41,6 +42,14 @@ export const createOrder = async (req, res) => {
           message: `Stok ${medicine.nama_obat} tidak mencukupi. Sisa stok: ${medicine.stok}` 
         });
       }
+      
+      // Simpan data stok untuk update nanti
+      stockData.push({
+        medicine_id: item.medicine_id,
+        current_stock: medicine.stok,
+        quantity: jumlahBeli,
+        new_stock: medicine.stok - jumlahBeli
+      });
     }
     
     // Create order
@@ -60,13 +69,12 @@ export const createOrder = async (req, res) => {
     
     console.log('Order created:', order[0]);
     
-    // CREATE ORDER DETAILS & UPDATE STOCK
+    // CREATE ORDER DETAILS 
     for (const item of items) {
       const medicineId = item.medicine_id;
       const jumlahBeli = parseInt(item.jumlah);
       const subtotal = parseInt(item.subtotal);
       
-      // Insert order detail
       const { error: detailError } = await supabaseAdmin
         .from('order_details')
         .insert([{
@@ -81,33 +89,22 @@ export const createOrder = async (req, res) => {
         throw detailError;
       }
       
-      // UPDATE STOCK - PAKAI cara yang paling aman
-      // Ambil stok saat ini
-      const { data: currentMedicine, error: fetchError } = await supabaseAdmin
-        .from('medicines')
-        .select('stok')
-        .eq('id', medicineId)
-        .single();
-      
-      if (fetchError) {
-        console.error('Fetch stock error:', fetchError);
-        throw fetchError;
-      }
-      
-      const newStock = currentMedicine.stok - jumlahBeli;
-      
-      // Update stok
+      console.log(`Order detail created for medicine ${medicineId}`);
+    }
+    
+    // UPDATE STOCK - Dilakukan SEKALI di luar loop item
+    for (const stock of stockData) {
       const { error: updateError } = await supabaseAdmin
         .from('medicines')
-        .update({ stok: newStock })
-        .eq('id', medicineId);
+        .update({ stok: stock.new_stock })
+        .eq('id', stock.medicine_id);
       
       if (updateError) {
         console.error('Update stock error:', updateError);
         throw updateError;
       }
       
-      console.log(`Stock updated: ${medicineId} from ${currentMedicine.stok} to ${newStock}`);
+      console.log(`Stock updated: ${stock.medicine_id} from ${stock.current_stock} to ${stock.new_stock}`);
     }
     
     res.status(201).json({ success: true, data: order[0] });
@@ -181,4 +178,4 @@ export const updateOrderStatus = async (req, res) => {
     console.error('Error updating order status:', error);
     res.status(500).json({ success: false, message: error.message });
   }
-};
+};  

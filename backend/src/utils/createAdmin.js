@@ -62,7 +62,7 @@ const createDefaultAdmin = async () => {
         nama: adminNama,
         nomor_telepon: adminPhone,
         alamat: adminAlamat,
-        role: 'admin',
+        role: 'admin', // ROLE ADMIN, BUKAN DOKTER
         created_at: new Date(),
         updated_at: new Date()
       }, {
@@ -73,35 +73,40 @@ const createDefaultAdmin = async () => {
       console.error('❌ Error upserting profile:', profileError);
       return;
     }
+    console.log('✅ Admin profile created/updated with role: admin');
     
-    // 4. Cek apakah admin sudah punya data di tabel doctors (opsional)
-    const { data: existingDoctor } = await supabaseAdmin
+    // 4. HAPUS data admin dari tabel doctors jika ada (karena admin bukan dokter!)
+    console.log('🗑️ Checking and removing admin from doctors table (if exists)...');
+    const { data: existingDoctor, error: checkError } = await supabaseAdmin
       .from('doctors')
       .select('id')
       .eq('user_id', userId)
       .single();
     
-    if (!existingDoctor) {
-      // Admin juga bisa berperan sebagai dokter (opsional)
-      console.log('📝 Adding doctor record for admin (optional)...');
-      const { error: doctorError } = await supabaseAdmin
+    if (existingDoctor) {
+      // Jika admin pernah terdaftar sebagai dokter, hapus!
+      const { error: deleteError } = await supabaseAdmin
         .from('doctors')
-        .insert({
-          user_id: userId,
-          nama_dokter: adminNama,
-          spesialis: 'Admin',
-          biaya_konsultasi: 0,
-          jadwal_praktik: 'Senin - Jumat, 09:00 - 17:00'
-        });
+        .delete()
+        .eq('user_id', userId);
       
-      if (doctorError) {
-        console.log('⚠️ Doctor record not created (not required for admin):', doctorError.message);
+      if (deleteError) {
+        console.error('❌ Error deleting admin from doctors:', deleteError);
       } else {
-        console.log('✅ Doctor record created');
+        console.log('✅ Admin removed from doctors table (admin is NOT a doctor)');
       }
+    } else {
+      console.log('✅ Admin not found in doctors table (good, admin should not be a doctor)');
     }
     
-
+    console.log('\n═══════════════════════════════════════════');
+    console.log('✅ DEFAULT ADMIN CREATED/UPDATED SUCCESSFULLY!');
+    console.log('═══════════════════════════════════════════');
+    console.log(`📧 Email: ${adminEmail}`);
+    console.log(`🔑 Password: ${adminPassword}`);
+    console.log(`👤 Name: ${adminNama}`);
+    console.log(`🎭 Role: ADMIN (NOT A DOCTOR)`);
+    console.log('═══════════════════════════════════════════\n');
     
   } catch (error) {
     console.error('❌ Fatal error creating admin:', error);
